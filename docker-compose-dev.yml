@@ -1,0 +1,63 @@
+services:
+    api-gateway:
+      image: nginx:latest
+      container_name: foodcore-api-gateway
+      ports:
+          - "8080:80"
+      volumes:
+        - ./api-gateway/nginx.conf:/etc/nginx/nginx.conf
+        - ./api-gateway/api_conf.d:/etc/nginx/api_conf.d
+        - ./api-gateway/api_conf.d/api.conf:/etc/nginx/api_conf.d/api.conf
+        - ./api-gateway/api_backends.conf:/etc/nginx/api_backends.conf
+        - ./api-gateway/api_gateway.conf:/etc/nginx/api_gateway.conf
+      depends_on:
+        - orders-service
+        - payments-service
+      networks:
+        - foodcore-network
+    orders-service:
+      build:
+        context: ./orders-service
+        dockerfile: Dockerfile.dev
+      container_name: foodcore-orders-service
+      env_file:
+          - ./orders-service/.env
+      volumes:
+        - ./orders-service:/var/www
+        - ./orders-service/vendor:/var/www/vendor
+      ports:
+        - "8001:80"
+      networks:
+          - foodcore-network
+    payments-service:
+      build:
+        context: ./payments-service
+        dockerfile: Dockerfile.dev
+      container_name: foodcore-payments-service
+      env_file:
+        - ./payments-service/.env
+      volumes:
+        - ./payments-service:/var/www
+        - ./payments-service/vendor:/var/www/vendor
+      ports:
+        - "8002:80"
+      networks:
+        - foodcore-network
+    db:
+      image: postgres:latest
+      container_name: foodcore-db
+      environment:
+        POSTGRES_USER: foodcore
+        POSTGRES_PASSWORD: secret
+        POSTGRES_DB: foodcore_db
+      ports:
+        - "5432:5432"
+      volumes:
+        - db-data:/var/lib/postgresql/data
+      networks:
+        - foodcore-network
+networks:
+  foodcore-network:
+    driver: bridge
+volumes:
+  db-data:
